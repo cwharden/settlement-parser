@@ -150,15 +150,37 @@ if uploaded_files:
     else:
         st.warning("No data extracted from the uploaded files.")
 
-# --- Feedback Section ---
+# --- Feedback & Carrier Requests ---
 st.markdown("---")
-st.subheader("📝 Feedback & Suggestions")
+st.subheader("📝 Feedback & Carrier Requests")
 
+# Row 1: General Feedback
 st.markdown("""
-I'm constantly improving this tool! If you have feedback, found a bug, or need support for a different carrier, please let me know. Your input helps me make this better for everyone.
+**Found a bug? Have a suggestion?** I'm constantly improving this tool, and your feedback helps me make it better for everyone.
 """)
 
-# --- Replace this URL with your Google Form link ---
 feedback_url = "mailto:settlementparsermail@gmail.com?subject=Settlement%20Parser%20Feedback"
+st.link_button("📩 Send Feedback", feedback_url, type="secondary")
 
-st.link_button("📩 Send Feedback", feedback_url, type="primary")
+# Row 2: New Carrier Request (with divider)
+st.markdown("---")
+st.subheader("🚛 Don't see your carrier?")
+
+st.markdown("""
+Currently supporting **Bennett** and **Landstar**. If you use a different carrier, I can add support for it!
+
+**What I need from you:**
+- 3-5 sample settlement PDFs (different dates if possible)
+- Your carrier name
+- Any specific data you need captured
+
+**Pricing:**
+- **$150 one-time fee** (standard carriers)
+- **$250 one-time fee** (complex carriers with images/OCR)
+- **Free with annual subscription** ($99/year)
+
+**Turnaround:** 2-3 weeks (I work on this in my free time)
+""")
+
+carrier_request_url = "mailto:settlementparsermail@gmail.com?subject=New%20Carrier%20Request%20-%20[Carrier%20Name]"
+st.link_button("🚛 Request a New Carrier", carrier_request_url, type="primary")
