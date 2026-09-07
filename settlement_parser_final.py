@@ -1,8 +1,15 @@
 import pdfplumber
 import csv
 import re
-import tkinter as tk
-from tkinter import filedialog
+# tkinter is only needed for the desktop version
+try:
+    import tkinter as tk
+    from tkinter import filedialog
+except ImportError:
+    tk = None
+    filedialog = None
+# import tkinter as tk
+# from tkinter import filedialog
 import os
 import sys
 import pytesseract
@@ -1157,6 +1164,11 @@ def main():
     print("🔍 Entering main() function...")
     print("⏳ Opening file picker...")
     
+    if filedialog is None:
+        print("❌ This script must be run locally with tkinter installed.")
+        print("📱 Please use the Streamlit web app instead: streamlit run app.py")
+        return
+    
     root = tk.Tk()
     root.attributes('-topmost', True)
     root.withdraw()
@@ -1165,6 +1177,7 @@ def main():
         title="Select Settlement PDFs",
         filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
     )
+    
     
     if not pdf_files:
         print("\n❌ No files selected. Exiting.")
