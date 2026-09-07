@@ -26,12 +26,16 @@ uploaded_files = st.file_uploader(
     accept_multiple_files=True
 )
 
-# --- 2-File Limit ---
+# --- 2-File Limit (Session-Based) ---
+if 'processed_count' not in st.session_state:
+    st.session_state.processed_count = 0
+
 MAX_FILES = 2
 
 if uploaded_files:
-    if len(uploaded_files) > MAX_FILES:
-        st.error(f"⚠️ You can only process up to {MAX_FILES} files at a time. Please select {MAX_FILES} or fewer files.")
+    # Check if user has already processed the max
+    if st.session_state.processed_count >= MAX_FILES:
+        st.error(f"⚠️ You have already processed {MAX_FILES} files. Please refresh the page to start a new session.")
         st.stop()
 
 if uploaded_files:
@@ -45,7 +49,6 @@ if uploaded_files:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
                 tmp_file.write(uploaded_file.getvalue())
                 tmp_path = tmp_file.name
-                # ... rest of your code
             
             text = extract_text_from_pdf(tmp_path)
             if not text:
@@ -70,6 +73,9 @@ if uploaded_files:
             st.error(f"Error processing {uploaded_file.name}: {e}")
         
         progress_bar.progress((i + 1) / len(uploaded_files))
+    
+    # --- Increment the processed count ---
+    st.session_state.processed_count += len(uploaded_files)
     
     status_text.text("Processing complete!")
     
@@ -110,7 +116,7 @@ if uploaded_files:
             'Entered Date', 'Entered Processed Date', 'Entered Description',
             'Entered Amount', 'Total Deductions', 'Balance to be Paid',
             'Deduction Entered Date', 'Deduction Processed Date',
-            'Deduction Description', 'Deduction Amount', 'Net', 'Total Refunds'   # <--- ADD 'Total Refunds' HERE
+            'Deduction Description', 'Deduction Amount', 'Net', 'Total Refunds'
         ]
         
         output = StringIO()
@@ -119,10 +125,10 @@ if uploaded_files:
         writer.writerows(all_rows)
         universal_csv = output.getvalue()
         
-        # Generate QuickBooks CSV (now returns string)
+        # Generate QuickBooks CSV
         qb_csv = export_to_quickbooks(all_rows)
         
-        # Convert to bytes for download (safe practice)
+        # Convert to bytes for download
         universal_bytes = universal_csv.encode('utf-8')
         qb_bytes = qb_csv.encode('utf-8')
         
