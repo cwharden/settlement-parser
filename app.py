@@ -149,3 +149,16 @@ if uploaded_files:
             )
     else:
         st.warning("No data extracted from the uploaded files.")
+
+# --- Feedback Section ---
+st.markdown("---")
+st.subheader("📝 Feedback & Suggestions")
+
+st.markdown("""
+I'm constantly improving this tool! If you have feedback, found a bug, or need support for a different carrier, please let me know. Your input helps me make this better for everyone.
+""")
+
+# --- Replace this URL with your Google Form link ---
+feedback_url = "mailto:settlementparsermail@gmail.com?subject=Settlement%20Parser%20Feedback"
+
+st.link_button("📩 Send Feedback", feedback_url, type="primary")
