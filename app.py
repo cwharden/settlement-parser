@@ -20,43 +20,161 @@ def run_ifta():
     st.subheader("📊 IFTA Fuel Tax Tracker")
     st.markdown("Track your miles and fuel purchases by state for quarterly IFTA reporting.")
     
-    # Initialize session state for IFTA data
+    # Initialize session state
     if 'ifta_trips' not in st.session_state:
         st.session_state.ifta_trips = []
     if 'ifta_fuel' not in st.session_state:
         st.session_state.ifta_fuel = []
     
-    # --- Tab Layout for IFTA ---
+    # --- Tab Layout ---
     ifta_tab1, ifta_tab2, ifta_tab3 = st.tabs(["📝 Trip Log", "⛽ Fuel Log", "📊 Quarterly Report"])
     
     # ---------- IFTA TAB 1: Trip Log ----------
     with ifta_tab1:
         st.subheader("📝 Log a Trip")
         
-        with st.form("trip_form"):
-            col1, col2 = st.columns(2)
-            with col1:
-                trip_date = st.date_input("Date")
-                origin = st.text_input("Origin (City, ST)")
-                destination = st.text_input("Destination (City, ST)")
-            with col2:
+        # --- State list for dropdowns (sorted) ---
+        state_tax_rates = {
+            'AL': 0.28, 'AZ': 0.26, 'AR': 0.28, 'CA': 0.53, 'CO': 0.22,
+            'CT': 0.44, 'DE': 0.23, 'FL': 0.34, 'GA': 0.32, 'ID': 0.33,
+            'IL': 0.46, 'IN': 0.36, 'IA': 0.34, 'KS': 0.26, 'KY': 0.28,
+            'LA': 0.27, 'ME': 0.36, 'MD': 0.37, 'MA': 0.27, 'MI': 0.30,
+            'MN': 0.29, 'MS': 0.29, 'MO': 0.30, 'MT': 0.30, 'NE': 0.29,
+            'NV': 0.30, 'NH': 0.23, 'NJ': 0.37, 'NM': 0.27, 'NY': 0.45,
+            'NC': 0.36, 'ND': 0.23, 'OH': 0.28, 'OK': 0.26, 'OR': 0.33,
+            'PA': 0.39, 'RI': 0.35, 'SC': 0.28, 'SD': 0.30, 'TN': 0.28,
+            'TX': 0.20, 'UT': 0.31, 'VT': 0.33, 'VA': 0.30, 'WA': 0.49,
+            'WV': 0.36, 'WI': 0.30, 'WY': 0.24
+        }
+        us_states = sorted(state_tax_rates.keys())  # dropdown options
+        
+        # --- ✅ NEW POINT-TO-POINT FORM (exactly as you asked) ---
+        with st.form("point_to_point_form"):
+            st.markdown("**📍 Point‑to‑Point Trip (Origin → Destination)**")
+            
+            # --- Column headers ---
+            col_h1, col_h2, col_h3 = st.columns([2, 1, 1])
+            with col_h1:
+                st.write("**Location (City, ST)**")
+            with col_h2:
+                st.write("**Total Miles**")
+            with col_h3:
+                st.write("**Deadhead**")
+            
+            st.divider()
+            
+            # --- ORIGIN ROW ---
+            col_o1, col_o2, col_o3 = st.columns([2, 1, 1])
+            with col_o1:
+                orig_city = st.text_input("Origin City", placeholder="e.g. Lancaster", key="orig_city")
+                orig_state = st.selectbox("Origin State", us_states, key="orig_state", index=us_states.index("SC") if "SC" in us_states else 0)
+            with col_o2:
+                orig_miles = st.number_input(" ", min_value=0.0, step=0.01, value=0.0, key="orig_miles", label_visibility="collapsed")
+            with col_o3:
+                orig_dead = st.number_input("  ", min_value=0.0, step=0.01, value=0.0, key="orig_dead", label_visibility="collapsed")
+            
+            # --- DESTINATION ROW ---
+            col_d1, col_d2, col_d3 = st.columns([2, 1, 1])
+            with col_d1:
+                dest_city = st.text_input("Destination City", placeholder="e.g. Hirman", key="dest_city")
+                dest_state = st.selectbox("Destination State", us_states, key="dest_state", index=us_states.index("GA") if "GA" in us_states else 0)
+            with col_d2:
+                dest_miles = st.number_input("   ", min_value=0.0, step=0.01, value=0.0, key="dest_miles", label_visibility="collapsed")
+            with col_d3:
+                dest_dead = st.number_input("    ", min_value=0.0, step=0.01, value=0.0, key="dest_dead", label_visibility="collapsed")
+            
+            st.divider()
+            
+            # --- Trip metadata ---
+            col_date, col_notes = st.columns(2)
+            with col_date:
+                trip_date = st.date_input("Trip Date")
+            with col_notes:
                 trip_notes = st.text_area("Notes (optional)", height=68)
             
-            st.markdown("**Miles by State (add each state you drove through)**")
+            submitted_ptp = st.form_submit_button("✅ Save Trip")
             
-            # Use a raw string to avoid escape issues, and keep triple quotes on their own lines
-            st.markdown("""
-            Enter each state on a new line with format: **State, Total Miles, Deadhead Miles**
-            Example:
-            GA, 169.72, 50.00
-            SC, 87.42, 10.00
-            """)
+            if submitted_ptp:
+                states_list = []
+                total_miles = 0
+                total_deadhead = 0
+                valid = True
+                
+                # Process Origin
+                if orig_miles > 0:
+                    if orig_miles >= orig_dead:
+                        states_list.append({
+                            'state': orig_state,
+                            'total_miles': orig_miles,
+                            'deadhead_miles': orig_dead,
+                            'loaded_miles': orig_miles - orig_dead
+                        })
+                        total_miles += orig_miles
+                        total_deadhead += orig_dead
+                    else:
+                        st.warning(f"Origin deadhead ({orig_dead}) cannot exceed total miles ({orig_miles}).")
+                        valid = False
+                else:
+                    st.warning("Origin total miles must be greater than 0.")
+                    valid = False
+                
+                # Process Destination
+                if dest_miles > 0:
+                    if dest_miles >= dest_dead:
+                        states_list.append({
+                            'state': dest_state,
+                            'total_miles': dest_miles,
+                            'deadhead_miles': dest_dead,
+                            'loaded_miles': dest_miles - dest_dead
+                        })
+                        total_miles += dest_miles
+                        total_deadhead += dest_dead
+                    else:
+                        st.warning(f"Destination deadhead ({dest_dead}) cannot exceed total miles ({dest_miles}).")
+                        valid = False
+                else:
+                    st.warning("Destination total miles must be greater than 0.")
+                    valid = False
+                
+                if valid and states_list:
+                    # Build clean location strings
+                    origin_display = f"{orig_city}, {orig_state}" if orig_city else orig_state
+                    dest_display = f"{dest_city}, {dest_state}" if dest_city else dest_state
+                    
+                    st.session_state.ifta_trips.append({
+                        'date': trip_date.strftime("%m/%d/%Y"),
+                        'origin': origin_display,
+                        'destination': dest_display,
+                        'notes': trip_notes,
+                        'states': states_list,
+                        'total_miles': total_miles,
+                        'total_deadhead': total_deadhead,
+                        'total_loaded': total_miles - total_deadhead
+                    })
+                    st.success(f"✅ Trip saved! {total_miles} total miles, {total_deadhead} deadhead miles.")
+                elif not valid:
+                    st.error("Please correct the errors above.")
+        
+        st.markdown("---")
+        st.info("🔄 **For trips with 3+ states** (e.g., GA → SC → NC), use the multi‑state text area below.")
+        
+        # --- Multi-State Text Area (kept for flexibility) ---
+        with st.form("multi_state_form"):
+            col1, col2 = st.columns(2)
+            with col1:
+                multi_date = st.date_input("Date", key="multi_date")
+                multi_origin = st.text_input("Origin (City, ST)", key="multi_origin")
+            with col2:
+                multi_dest = st.text_input("Destination (City, ST)", key="multi_dest")
+                multi_notes = st.text_area("Notes (optional)", height=68, key="multi_notes")
             
-            state_miles_input = st.text_area("State miles (one per line)", height=100)
+            st.markdown("**Miles by State (one per line)**")
+            st.markdown("Format: **State, Total Miles, Deadhead Miles** (e.g. `GA, 169.72, 50.00`)")
+            state_miles_input = st.text_area("State miles", height=100, key="multi_miles")
             
-            submitted = st.form_submit_button("Save Trip")
+            submitted_multi = st.form_submit_button("✅ Save Multi-State Trip")
             
-            if submitted:
+            if submitted_multi:
                 if not state_miles_input.strip():
                     st.warning("Please enter at least one state with miles.")
                 else:
@@ -82,21 +200,21 @@ def run_ifta():
                                     total_miles += total
                                     total_deadhead += deadhead
                                 else:
-                                    st.warning(f"Deadhead miles ({deadhead}) cannot exceed total miles ({total}) for {state}. Skipping this line.")
+                                    st.warning(f"Deadhead ({deadhead}) exceeds total ({total}) for {state}. Skipping.")
                                     valid = False
                             except ValueError:
                                 st.warning(f"Invalid numbers in line: {line}. Skipping.")
                                 valid = False
                         else:
-                            st.warning(f"Invalid format in line: {line}. Expected: State, Total Miles, Deadhead Miles")
+                            st.warning(f"Invalid format: {line}. Expected: State, Total Miles, Deadhead Miles")
                             valid = False
                     
                     if valid and states:
                         st.session_state.ifta_trips.append({
-                            'date': trip_date.strftime("%m/%d/%Y"),
-                            'origin': origin,
-                            'destination': destination,
-                            'notes': trip_notes,
+                            'date': multi_date.strftime("%m/%d/%Y"),
+                            'origin': multi_origin,
+                            'destination': multi_dest,
+                            'notes': multi_notes,
                             'states': states,
                             'total_miles': total_miles,
                             'total_deadhead': total_deadhead,
@@ -106,7 +224,7 @@ def run_ifta():
                     elif not valid:
                         st.error("Please correct the errors and try again.")
         
-        # Show existing trips (indented correctly under with ifta_tab1)
+        # --- Show Existing Trips (unchanged) ---
         if st.session_state.ifta_trips:
             st.subheader("📋 Trip History")
             for idx, trip in enumerate(st.session_state.ifta_trips):
@@ -136,7 +254,7 @@ def run_ifta():
     with ifta_tab2:
         st.subheader("⛽ Log Fuel Purchase")
         
-        state_tax_rates = {
+        state_tax_rates_fuel = {
             'AL': 0.28, 'AZ': 0.26, 'AR': 0.28, 'CA': 0.53, 'CO': 0.22,
             'CT': 0.44, 'DE': 0.23, 'FL': 0.34, 'GA': 0.32, 'ID': 0.33,
             'IL': 0.46, 'IN': 0.36, 'IA': 0.34, 'KS': 0.26, 'KY': 0.28,
@@ -153,11 +271,11 @@ def run_ifta():
             col1, col2 = st.columns(2)
             with col1:
                 fuel_date = st.date_input("Date")
-                state = st.selectbox("State/Province", list(state_tax_rates.keys()))
+                state = st.selectbox("State/Province", sorted(state_tax_rates_fuel.keys()))
                 gallons = st.number_input("Gallons Purchased", min_value=0.0, step=0.1)
             with col2:
                 price_per_gallon = st.number_input("Price per Gallon ($)", min_value=0.0, step=0.01)
-                tax_rate = state_tax_rates.get(state, 0.30)
+                tax_rate = state_tax_rates_fuel.get(state, 0.30)
                 tax_paid = gallons * tax_rate
                 st.info(f"**Tax Paid:** ${tax_paid:.2f} (at ${tax_rate:.2f}/gallon)")
             
@@ -182,7 +300,7 @@ def run_ifta():
                 st.session_state.ifta_fuel = []
                 st.rerun()
     
-    # ---------- IFTA TAB 3: Quarterly Report ----------
+    # ---------- IFTA TAB 3: Quarterly Report (unchanged) ----------
     with ifta_tab3:
         st.subheader("📊 Quarterly IFTA Report")
         
