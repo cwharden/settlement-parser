@@ -14,34 +14,53 @@ from settlement_parser_final import (
 )
 
 # ---------- IFTA Module ----------
+# ---------- Helper: Load Tax Rates from CSV ----------
+def load_tax_rates():
+    """Load state tax rates from local CSV file. Fallback to hardcoded dict."""
+    try:
+        with open("state_tax_rates.csv", "r", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            rates = {}
+            for row in reader:
+                state = row['state'].strip().upper()
+                tax = float(row['tax_rate'].strip())
+                rates[state] = tax
+            return rates
+    except FileNotFoundError:
+        # Fallback – using correct Q3 2026 rates
+        return {
+            'AL': 0.31, 'AZ': 0.26, 'AR': 0.285, 'CA': 0.979, 'CO': 0.335,
+            'CT': 0.499, 'DE': 0.22, 'FL': 0.4097, 'GA': 0.373, 'ID': 0.32,
+            'IL': 0.738, 'IN': 0.63, 'IA': 0.325, 'KS': 0.26, 'KY': 0.325,
+            'LA': 0.20, 'ME': 0.312, 'MD': 0.4745, 'MA': 0.24, 'MI': 0.524,
+            'MN': 0.326, 'MS': 0.24, 'MO': 0.295, 'MT': 0.2975, 'NE': 0.318,
+            'NV': 0.27, 'NH': 0.222, 'NJ': 0.561, 'NM': 0.21, 'NY': 0.3805,
+            'NC': 0.41, 'ND': 0.23, 'OH': 0.47, 'OK': 0.19, 'OR': 0.00,
+            'PA': 0.741, 'RI': 0.40, 'SC': 0.28, 'SD': 0.28, 'TN': 0.27,
+            'TX': 0.20, 'UT': 0.379, 'VT': 0.31, 'VA': 0.479, 'WA': 0.595,
+            'WV': 0.357, 'WI': 0.329, 'WY': 0.24
+        }
+# ---------- IFTA Module ----------
 def run_ifta():
     """IFTA Fuel Tax Module with Trip Log, Fuel Log, Quarterly Report, and Load Estimator"""
     
     st.subheader("📊 IFTA Fuel Tax Tracker")
     st.markdown("Track your miles and fuel purchases by state for quarterly IFTA reporting, plus estimate load profits.")
     
-    # Initialize session state
+    # Load tax rates from CSV (once per session)
+    if 'tax_rates' not in st.session_state:
+        st.session_state.tax_rates = load_tax_rates()
+    
+    state_tax_rates = st.session_state.tax_rates
+    us_states = sorted(state_tax_rates.keys())
+    
+    # Initialize session state for data
     if 'ifta_trips' not in st.session_state:
         st.session_state.ifta_trips = []
     if 'ifta_fuel' not in st.session_state:
         st.session_state.ifta_fuel = []
     if 'ifta_estimates' not in st.session_state:
         st.session_state.ifta_estimates = []
-    
-    # --- State Tax Rates (used everywhere) ---
-    state_tax_rates = {
-        'AL': 0.28, 'AZ': 0.26, 'AR': 0.28, 'CA': 0.53, 'CO': 0.22,
-        'CT': 0.44, 'DE': 0.23, 'FL': 0.34, 'GA': 0.32, 'ID': 0.33,
-        'IL': 0.46, 'IN': 0.36, 'IA': 0.34, 'KS': 0.26, 'KY': 0.28,
-        'LA': 0.27, 'ME': 0.36, 'MD': 0.37, 'MA': 0.27, 'MI': 0.30,
-        'MN': 0.29, 'MS': 0.29, 'MO': 0.30, 'MT': 0.30, 'NE': 0.29,
-        'NV': 0.30, 'NH': 0.23, 'NJ': 0.37, 'NM': 0.27, 'NY': 0.45,
-        'NC': 0.36, 'ND': 0.23, 'OH': 0.28, 'OK': 0.26, 'OR': 0.33,
-        'PA': 0.39, 'RI': 0.35, 'SC': 0.28, 'SD': 0.30, 'TN': 0.28,
-        'TX': 0.20, 'UT': 0.31, 'VT': 0.33, 'VA': 0.30, 'WA': 0.49,
-        'WV': 0.36, 'WI': 0.30, 'WY': 0.24
-    }
-    us_states = sorted(state_tax_rates.keys())
     
     # --- Tab Layout ---
     ifta_tab1, ifta_tab2, ifta_tab3, ifta_tab4 = st.tabs([
@@ -51,7 +70,7 @@ def run_ifta():
         "💰 Load Estimator"
     ])
     
-    # ---------- TAB 1: Trip Log (unchanged from your current version) ----------
+    # ---------- TAB 1: Trip Log ----------
     with ifta_tab1:
         st.subheader("📝 Log a Trip")
         
@@ -227,7 +246,7 @@ def run_ifta():
                         st.session_state.ifta_trips.pop(idx)
                         st.rerun()
             
-            # --- CSV Download for Trip Log ---
+            # CSV Download for Trip Log
             if st.button("📥 Download Trip Log (CSV)", key="dl_trips"):
                 trip_flat = []
                 for t in st.session_state.ifta_trips:
@@ -292,7 +311,6 @@ def run_ifta():
                     st.session_state.ifta_fuel = []
                     st.rerun()
             with col_dl:
-                # CSV Download for Fuel Log
                 output = StringIO()
                 writer = csv.DictWriter(output, fieldnames=['date', 'state', 'gallons', 'price_per_gallon', 'tax_rate', 'tax_paid'])
                 writer.writeheader()
@@ -389,13 +407,12 @@ def run_ifta():
                 else:
                     st.info("You've broken even this quarter.")
                 
-                # --- CSV Download for Quarterly Report ---
+                # CSV Download for Quarterly Report
                 st.subheader("📥 Download Report")
                 output = StringIO()
                 writer = csv.DictWriter(output, fieldnames=['State', 'Miles', 'Deadhead', 'Loaded', 'Taxable Gal', 'Tax Rate', 'Tax Owed', 'Tax Paid', 'Net'])
                 writer.writeheader()
                 writer.writerows(report_data)
-                # Add summary row
                 summary_row = {
                     'State': 'TOTAL',
                     'Miles': f"{total_miles_all:,.0f}",
@@ -407,8 +424,6 @@ def run_ifta():
                     'Tax Paid': f"${total_tax_paid:,.2f}",
                     'Net': f"${total_tax_paid - total_tax_owed:,.2f}"
                 }
-                # Need to re-write because we appended a dict without all fields? Actually easier to just write the data and append separately.
-                # Let's just use the existing report_data and add a summary manually in the CSV by writing a new list.
                 rows_with_summary = report_data.copy()
                 rows_with_summary.append(summary_row)
                 output2 = StringIO()
@@ -481,7 +496,6 @@ def run_ifta():
                 total_deadhead = 0
                 valid = True
                 
-                # Process origin
                 if est_orig_miles > 0:
                     if est_orig_miles >= est_orig_dead:
                         states_list.append({'state': est_orig_state, 'total_miles': est_orig_miles, 'deadhead_miles': est_orig_dead})
@@ -494,7 +508,6 @@ def run_ifta():
                     st.warning("Origin miles must be greater than 0.")
                     valid = False
                 
-                # Process destination
                 if est_dest_miles > 0:
                     if est_dest_miles >= est_dest_dead:
                         states_list.append({'state': est_dest_state, 'total_miles': est_dest_miles, 'deadhead_miles': est_dest_dead})
@@ -508,12 +521,10 @@ def run_ifta():
                     valid = False
                 
                 if valid and states_list:
-                    # --- Calculations ---
                     gross_revenue = total_miles * rate_per_mile
                     fuel_gallons_needed = total_miles / est_mpg if est_mpg > 0 else 0
                     fuel_cost = fuel_gallons_needed * est_fuel_price
                     
-                    # IFTA Tax
                     total_tax_owed_est = 0
                     state_breakdown = []
                     for s in states_list:
@@ -526,7 +537,6 @@ def run_ifta():
                     
                     net_profit = gross_revenue - fuel_cost - total_tax_owed_est
                     
-                    # Save to history
                     st.session_state.ifta_estimates.append({
                         'date': est_date.strftime("%m/%d/%Y"),
                         'origin': est_origin,
@@ -544,7 +554,6 @@ def run_ifta():
                         'state_breakdown': "; ".join(state_breakdown)
                     })
                     
-                    # Show result immediately
                     st.success(f"✅ Estimate saved! Net Profit: **${net_profit:,.2f}**")
                     st.metric("Gross Revenue", f"${gross_revenue:,.2f}")
                     st.metric("Fuel Cost", f"${fuel_cost:,.2f}")
@@ -556,7 +565,6 @@ def run_ifta():
         # --- Estimator History ---
         if st.session_state.ifta_estimates:
             st.subheader("📋 Estimate History")
-            # Display summary
             est_display = []
             for idx, e in enumerate(st.session_state.ifta_estimates):
                 est_display.append({
@@ -572,7 +580,6 @@ def run_ifta():
                 })
             st.dataframe(est_display)
             
-            # Expand to see details
             for idx, e in enumerate(st.session_state.ifta_estimates):
                 with st.expander(f"Estimate {idx+1}: {e['date']} - {e['origin']} → {e['destination']} (Net: ${e['net_profit']:.2f})"):
                     st.write(f"**Total Miles:** {e['total_miles']}")
@@ -588,7 +595,6 @@ def run_ifta():
                         st.session_state.ifta_estimates.pop(idx)
                         st.rerun()
             
-            # --- CSV Download for Estimates ---
             st.subheader("📥 Download Estimates")
             est_flat = []
             for e in st.session_state.ifta_estimates:
