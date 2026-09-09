@@ -25,9 +25,12 @@ def load_tax_rates():
                 state = row['state'].strip().upper()
                 tax = float(row['tax_rate'].strip())
                 rates[state] = tax
-            return rates
+        # ✅ DEBUG: Show this message if CSV loaded successfully
+        st.write("✅ **Debug:** Tax rates loaded from CSV")
+        return rates
     except FileNotFoundError:
         # Fallback – using correct Q3 2026 rates
+        st.warning("⚠️ **Debug:** CSV not found – using hardcoded fallback rates")
         return {
             'AL': 0.31, 'AZ': 0.26, 'AR': 0.285, 'CA': 0.979, 'CO': 0.335,
             'CT': 0.499, 'DE': 0.22, 'FL': 0.4097, 'GA': 0.373, 'ID': 0.32,
