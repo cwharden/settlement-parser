@@ -28,7 +28,7 @@ def load_tax_rates():
             return rates
     except FileNotFoundError:
         # Fallback – using correct Q3 2026 rates
-        st.warning("⚠️ **Debug:** CSV not found – using hardcoded fallback rates")
+        st.warning("⚠️ **Tax Rates:** CSV not found – using fallback rates. Please upload state_tax_rates.csv.")
         return {
             'AL': 0.31, 'AZ': 0.26, 'AR': 0.285, 'CA': 0.979, 'CO': 0.335,
             'CT': 0.499, 'DE': 0.22, 'FL': 0.4097, 'GA': 0.373, 'ID': 0.32,
@@ -41,7 +41,7 @@ def load_tax_rates():
             'TX': 0.20, 'UT': 0.379, 'VT': 0.31, 'VA': 0.479, 'WA': 0.595,
             'WV': 0.357, 'WI': 0.329, 'WY': 0.24
         }
-# ---------- IFTA Module ----------
+
 def run_ifta():
     """IFTA Fuel Tax Module with Trip Log, Fuel Log, Quarterly Report, and Load Estimator"""
     
@@ -56,7 +56,7 @@ def run_ifta():
     us_states = sorted(state_tax_rates.keys())
     
     # ✅ Show current rates status (moved here)
-    st.success(f"📋 **Tax Rates:** Loaded from CSV – {len(state_tax_rates)} states available (Q3 2026)")
+    st.info(f"📋 **Current Tax Rates:** {len(state_tax_rates)} states loaded · Q3 2026 · Source: state_tax_rates.csv")
     
     # Initialize session state for data
     if 'ifta_trips' not in st.session_state:
@@ -317,7 +317,7 @@ def run_ifta():
             
             col_del, col_dl = st.columns(2)
             with col_del:
-                if st.button("🗑️ Clear All Fuel Purchases"):
+                if st.button("🗑️ Clear All Fuel Purchases", type="primary", key="clear_all_fuel"):
                     st.session_state.ifta_fuel = []
                     st.rerun()
             with col_dl:
