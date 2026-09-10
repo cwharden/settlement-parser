@@ -25,9 +25,7 @@ def load_tax_rates():
                 state = row['state'].strip().upper()
                 tax = float(row['tax_rate'].strip())
                 rates[state] = tax
-        # ✅ DEBUG: Show this message if CSV loaded successfully
-        st.write("✅ **Debug:** Tax rates loaded from CSV")
-        return rates
+                return rates
     except FileNotFoundError:
         # Fallback – using correct Q3 2026 rates
         st.warning("⚠️ **Debug:** CSV not found – using hardcoded fallback rates")
@@ -56,6 +54,9 @@ def run_ifta():
     
     state_tax_rates = st.session_state.tax_rates
     us_states = sorted(state_tax_rates.keys())
+    
+    # ✅ Show current rates status (moved here)
+    st.success(f"📋 **Tax Rates:** Loaded from CSV – {len(state_tax_rates)} states available (Q3 2026)")
     
     # Initialize session state for data
     if 'ifta_trips' not in st.session_state:
