@@ -275,6 +275,12 @@ def run_ifta():
                     file_name="IFTA_Trip_Log.csv",
                     mime="text/csv"
                 )
+            st.markdown("---")
+            if st.button("🗑️ Clear All Trips", type="primary", key="clear_all_trips"):
+                st.session_state.ifta_trips = []
+                st.success("✅ All trips cleared.")
+                st.rerun()
+
     
     # ---------- TAB 2: Fuel Log ----------
     with ifta_tab2:
@@ -628,6 +634,11 @@ def run_ifta():
                 file_name="IFTA_Load_Estimates.csv",
                 mime="text/csv"
             )
+            st.markdown("---")
+            if st.button("🗑️ Clear All Estimates", type="primary", key="clear_all_estimates"):
+                st.session_state.ifta_estimates = []
+                st.success("✅ All estimates cleared.")
+                st.rerun()
 # ---------- MAIN APP ----------
 st.set_page_config(page_title="Settlement Parser", page_icon="🚛", layout="wide")
 
