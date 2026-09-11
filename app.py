@@ -52,83 +52,22 @@ def get_current_quarter():
     return f"{quarter}Q{today.year}"
 
 def fetch_latest_rates():
-    """
-    Download the official IFTA XML for the current quarter,
-    parse U.S. Special Diesel rates, apply surcharges,
-    and return a dict {state: rate}.
-    """
+    """TEMPORARY DEBUG VERSION"""
     quarter = get_current_quarter()
     url = f"https://www.iftach.org/taxmatrix/charts/{quarter}.xml"
 
+    st.write(f"🔍 Trying URL: `{url}`")
+
     try:
         response = requests.get(url, timeout=15)
-        response.raise_for_status()
+        st.write(f"🔍 HTTP status: {response.status_code}")
+        st.write(f"🔍 Content length: {len(response.content)} bytes")
+        st.write(f"🔍 First 800 chars of response:")
+        st.code(response.text[:800])
+        return None
     except Exception as e:
-        st.error(f"❌ Could not download the IFTA matrix: {e}")
+        st.error(f"❌ Download failed: {e}")
         return None
-
-    try:
-        root = ET.fromstring(response.content)
-    except ET.ParseError as e:
-        st.error(f"❌ Could not parse the IFTA XML: {e}")
-        return None
-    try:
-        root = ET.fromstring(response.content)
-    except ET.ParseError as e:
-        st.error(f"❌ Could not parse the IFTA XML: {e}")
-        return None
-
-    rates = {}
-    surcharges = {}
-
-    for record in root.findall(".//RECORD"):
-        jurisdiction = record.findtext("JURISDICTION", "").strip().upper()
-        country = record.findtext("COUNTRY", "").strip().upper()
-
-        # Only U.S. jurisdictions (2-letter codes + country = US)
-        if len(jurisdiction) != 2 or country != "US":
-            continue
-
-        # Walk through all FUEL_TYPE and RATE pairs
-        elements = list(record)
-        current_fuel_type = None
-
-        for elem in elements:
-            if elem.tag == "FUEL_TYPE":
-                current_fuel_type = elem.text.strip() if elem.text else ""
-            elif elem.tag == "RATE":
-                rate_country = elem.get("COUNTRY", "").strip().upper()
-                if rate_country != "US":
-                    continue
-                if current_fuel_type is None:
-                    continue
-
-                try:
-                    rate = float(elem.text.strip())
-                except (ValueError, AttributeError):
-                    continue
-
-                fuel_upper = current_fuel_type.upper()
-
-                if "SURCHARGE" in fuel_upper:
-                    # This is a surcharge row – add to surcharges
-                    surcharges[jurisdiction] = surcharges.get(jurisdiction, 0) + rate
-                elif "SPECIAL DIESEL" in fuel_upper or "DIESEL" in fuel_upper:
-                    # Base Special Diesel rate
-                    rates[jurisdiction] = rate
-
-    # Apply surcharges to base rates
-    for state, surcharge in surcharges.items():
-        if state in rates:
-            rates[state] += surcharge
-        else:
-            rates[state] = surcharge
-
-    if not rates:
-        st.warning("⚠️ No U.S. Special Diesel rates found in the XML. Using existing CSV.")
-        return None
-
-    return rates
 
 def run_ifta():
     """IFTA Fuel Tax Module with Trip Log, Fuel Log, Quarterly Report, and Load Estimator"""
