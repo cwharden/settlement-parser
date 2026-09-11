@@ -72,6 +72,11 @@ def fetch_latest_rates():
     except ET.ParseError as e:
         st.error(f"❌ Could not parse the IFTA XML: {e}")
         return None
+    try:
+        root = ET.fromstring(response.content)
+    except ET.ParseError as e:
+        st.error(f"❌ Could not parse the IFTA XML: {e}")
+        return None
 
     rates = {}
     surcharges = {}
