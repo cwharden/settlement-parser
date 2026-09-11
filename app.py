@@ -52,44 +52,73 @@ def get_current_quarter():
     return f"{quarter}Q{today.year}"
 
 def fetch_latest_rates():
-    """DIAGNOSTIC: show all distinct COUNTRY values"""
+    """
+    Download the official IFTA XML for the current quarter,
+    parse U.S. Special Diesel rates (including surcharges),
+    and return a dict {state: rate}.
+    """
     quarter = get_current_quarter()
     url = f"https://www.iftach.org/taxmatrix/charts/{quarter}.xml"
 
     try:
         response = requests.get(url, timeout=15)
         response.raise_for_status()
-        root = ET.fromstring(response.content)
     except Exception as e:
-        st.error(f"❌ Failed: {e}")
+        st.error(f"❌ Could not download the IFTA matrix: {e}")
         return None
 
-    records = root.findall(".//RECORD")
-    st.write(f"### 🔍 Total records: {len(records)}")
+    try:
+        root = ET.fromstring(response.content)
+    except ET.ParseError as e:
+        st.error(f"❌ Could not parse the IFTA XML: {e}")
+        return None
 
-    # Collect all distinct COUNTRY values with a sample jurisdiction
-    seen = {}
-    for rec in records:
-        jur = rec.find("JURISDICTION")
-        country = rec.find("COUNTRY")
-        if country is None or jur is None:
+    rates = {}
+
+    for record in root.findall(".//RECORD"):
+        jur_elem = record.find("JURISDICTION")
+        country_elem = record.find("COUNTRY")
+
+        if jur_elem is None or country_elem is None:
             continue
-        c = (country.text or "").strip()
-        if c not in seen:
-            seen[c] = (jur.text or "").strip()
 
-    st.write("### 🔍 Distinct COUNTRY values found:")
-    for c, sample in seen.items():
-        st.write(f"- `{repr(c)}` (first seen with jurisdiction `{sample}`)")
+        state_code = (jur_elem.text or "").strip().upper()
+        country = (country_elem.text or "").strip().upper()
 
-    # Also dump a "late" record (should be a U.S. state)
-    if len(records) > 15:
-        late = records[15]
-        st.write(f"### 🔍 Record #15 (should be a U.S. state):")
-        for child in late:
-            st.write(f"- tag=`{child.tag}` text=`{child.text!r}` attrs={child.attrib}")
+        # Accept US, U.S., USA (defensive – covers whatever IFTA uses)
+        if country not in ("US", "U.S.", "USA"):
+            continue
 
-    return None
+        # Only 2-letter state codes
+        if len(state_code) != 2:
+            continue
+
+        # Read the optional SURCHARGE attribute on JURISDICTION
+        surcharge_str = (jur_elem.get("SURCHARGE") or "").strip()
+        try:
+            surcharge = float(surcharge_str) if surcharge_str else 0.0
+        except ValueError:
+            surcharge = 0.0
+
+        # Walk children – find "Special Diesel" then grab the next US rate
+        current_fuel = None
+        for child in record:
+            if child.tag == "FUEL_TYPE":
+                current_fuel = (child.text or "").strip()
+            elif child.tag == "RATE":
+                if current_fuel == "Special Diesel" and child.get("COUNTRY") == "US":
+                    try:
+                        base_rate = float((child.text or "").strip())
+                        rates[state_code] = base_rate + surcharge
+                    except ValueError:
+                        pass
+                    break  # Done with this record
+
+    if not rates:
+        st.warning("⚠️ No U.S. Special Diesel rates found in the XML. Using existing CSV.")
+        return None
+
+    return rates
 
 def run_ifta():
     """IFTA Fuel Tax Module with Trip Log, Fuel Log, Quarterly Report, and Load Estimator"""
