@@ -78,27 +78,41 @@ def fetch_latest_rates():
 
     for record in root.findall(".//RECORD"):
         jurisdiction = record.findtext("JURISDICTION", "").strip().upper()
-        fuel_type = record.findtext("TYPE", "").strip()
-        rate_str = record.findtext("RATE", "").strip()
+        country = record.findtext("COUNTRY", "").strip().upper()
 
-        if not jurisdiction or not rate_str:
+        # Only U.S. jurisdictions (2-letter codes + country = US)
+        if len(jurisdiction) != 2 or country != "US":
             continue
 
-        # Only U.S. states (2-letter codes) – ignore Canadian provinces.
-        if len(jurisdiction) != 2:
-            continue
+        # Walk through all FUEL_TYPE and RATE pairs
+        elements = list(record)
+        current_fuel_type = None
 
-        try:
-            rate = float(rate_str)
-        except ValueError:
-            continue
+        for elem in elements:
+            if elem.tag == "FUEL_TYPE":
+                current_fuel_type = elem.text.strip() if elem.text else ""
+            elif elem.tag == "RATE":
+                rate_country = elem.get("COUNTRY", "").strip().upper()
+                if rate_country != "US":
+                    continue
+                if current_fuel_type is None:
+                    continue
 
-        if "SURCHARGE" in fuel_type.upper() or "SURCHG" in jurisdiction:
-            base_state = jurisdiction.replace("SURCHG", "").strip()
-            surcharges[base_state] = surcharges.get(base_state, 0) + rate
-        elif "DIESEL" in fuel_type.upper() or "SPECIAL" in fuel_type.upper():
-            rates[jurisdiction] = rate
+                try:
+                    rate = float(elem.text.strip())
+                except (ValueError, AttributeError):
+                    continue
 
+                fuel_upper = current_fuel_type.upper()
+
+                if "SURCHARGE" in fuel_upper:
+                    # This is a surcharge row – add to surcharges
+                    surcharges[jurisdiction] = surcharges.get(jurisdiction, 0) + rate
+                elif "SPECIAL DIESEL" in fuel_upper or "DIESEL" in fuel_upper:
+                    # Base Special Diesel rate
+                    rates[jurisdiction] = rate
+
+    # Apply surcharges to base rates
     for state, surcharge in surcharges.items():
         if state in rates:
             rates[state] += surcharge
