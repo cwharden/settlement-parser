@@ -52,11 +52,7 @@ def get_current_quarter():
     return f"{quarter}Q{today.year}"
 
 def fetch_latest_rates():
-    """
-    Download the official IFTA XML for the current quarter,
-    parse U.S. Special Diesel rates (including surcharges),
-    and return a dict {state: rate}.
-    """
+    """DIAGNOSTIC VERSION – shows exactly what's in the XML"""
     quarter = get_current_quarter()
     url = f"https://www.iftach.org/taxmatrix/charts/{quarter}.xml"
 
@@ -64,62 +60,61 @@ def fetch_latest_rates():
         response = requests.get(url, timeout=15)
         response.raise_for_status()
     except Exception as e:
-        st.error(f"❌ Could not download the IFTA matrix: {e}")
+        st.error(f"❌ Download failed: {e}")
         return None
 
     try:
         root = ET.fromstring(response.content)
     except ET.ParseError as e:
-        st.error(f"❌ Could not parse the IFTA XML: {e}")
+        st.error(f"❌ Parse failed: {e}")
         return None
 
-    rates = {}
+    records = root.findall(".//RECORD")
+    st.write(f"### 🔍 Found {len(records)} RECORD elements")
 
-    for record in root.findall(".//RECORD"):
-        jur_elem = record.find("JURISDICTION")
-        country_elem = record.find("COUNTRY")
-
-        if jur_elem is None or country_elem is None:
+    # Find the first US record and show everything
+    us_found = False
+    for idx, rec in enumerate(records):
+        jur = rec.find("JURISDICTION")
+        country = rec.find("COUNTRY")
+        
+        if jur is None or country is None:
+            st.write(f"Record {idx}: missing JURISDICTION or COUNTRY")
             continue
 
-        state_code = (jur_elem.text or "").strip().upper()
-        country = (country_elem.text or "").strip().upper()
+        jur_text = (jur.text or "").strip()
+        country_text = (country.text or "").strip()
+        
+        # Show first 3 records for inspection
+        if idx < 3:
+            st.write(f"**Record {idx}:** JURISDICTION=`{jur_text}`, COUNTRY=`{country_text}`, attrs={jur.attrib}")
+        
+        # Found a US record – dump all children
+        if country_text.upper() == "US" and not us_found:
+            us_found = True
+            st.success(f"✅ Found first US record: {jur_text}")
+            st.write("**All children in this record:**")
+            for child in rec:
+                st.write(f"- tag=`{child.tag}` text=`{child.text!r}` attrs={child.attrib}")
+            
+            # Now simulate the parsing logic
+            st.write("**Simulating parse logic:**")
+            current_fuel = None
+            for child in rec:
+                if child.tag == "FUEL_TYPE":
+                    current_fuel = (child.text or "").strip()
+                    st.write(f"  → Set current_fuel = `{current_fuel}`")
+                elif child.tag == "RATE":
+                    if current_fuel == "Special Diesel":
+                        st.write(f"  → RATE found for Special Diesel: country={child.get('COUNTRY')}, value={child.text}")
+                        if child.get("COUNTRY") == "US":
+                            st.success(f"  ✅ MATCH! Would extract: {child.text}")
+                            break
+    
+    if not us_found:
+        st.error("❌ No US records found at all!")
 
-        # Only U.S. states (2-letter codes)
-        if country != "US" or len(state_code) != 2:
-            continue
-
-        # Read the optional SURCHARGE attribute on JURISDICTION
-        surcharge_str = (jur_elem.get("SURCHARGE") or "").strip()
-        try:
-            surcharge = float(surcharge_str) if surcharge_str else 0.0
-        except ValueError:
-            surcharge = 0.0
-
-        # Walk through children: alternate FUEL_TYPE / RATE pairs
-        current_fuel = None
-        base_rate = None
-
-        for child in record:
-            if child.tag == "FUEL_TYPE":
-                current_fuel = (child.text or "").strip()
-            elif child.tag == "RATE":
-                # We want the US rate for "Special Diesel"
-                if current_fuel == "Special Diesel" and child.get("COUNTRY") == "US":
-                    try:
-                        base_rate = float((child.text or "").strip())
-                    except ValueError:
-                        pass
-                    break  # Done with this record
-
-        if base_rate is not None:
-            rates[state_code] = base_rate + surcharge
-
-    if not rates:
-        st.warning("⚠️ No U.S. Special Diesel rates found in the XML. Using existing CSV.")
-        return None
-
-    return rates
+    return None
 
     try:
         root = ET.fromstring(response.content)
