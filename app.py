@@ -52,22 +52,49 @@ def get_current_quarter():
     return f"{quarter}Q{today.year}"
 
 def fetch_latest_rates():
-    """TEMPORARY DEBUG VERSION"""
+    """TEMPORARY DEBUG VERSION 2"""
     quarter = get_current_quarter()
     url = f"https://www.iftach.org/taxmatrix/charts/{quarter}.xml"
-
-    st.write(f"🔍 Trying URL: `{url}`")
 
     try:
         response = requests.get(url, timeout=15)
         st.write(f"🔍 HTTP status: {response.status_code}")
-        st.write(f"🔍 Content length: {len(response.content)} bytes")
-        st.write(f"🔍 First 800 chars of response:")
-        st.code(response.text[:800])
-        return None
     except Exception as e:
         st.error(f"❌ Download failed: {e}")
         return None
+
+    try:
+        root = ET.fromstring(response.content)
+    except ET.ParseError as e:
+        st.error(f"❌ Parse failed: {e}")
+        return None
+
+    # Show the first 2500 characters (full DTD)
+    st.write("### 📋 Full DTD (schema)")
+    st.code(response.text[:2500])
+
+    # Show one full RECORD as raw text
+    records = root.findall(".//RECORD")
+    st.write(f"### 📋 Total RECORDs found: {len(records)}")
+
+    if records:
+        # Show first record's raw XML
+        first_record_xml = ET.tostring(records[0], encoding='unicode')
+        st.write("### 📋 First RECORD (raw XML)")
+        st.code(first_record_xml[:1500])
+
+        # Look for a US state record – try to find one with ID="GA" or similar
+        for rec in records:
+            jur = rec.find("JURISDICTION")
+            if jur is not None:
+                jur_id = jur.get("ID", "")
+                if jur_id in ["GA", "SC", "TX", "AL"]:
+                    us_record_xml = ET.tostring(rec, encoding='unicode')
+                    st.write(f"### 📋 Sample U.S. record (ID={jur_id})")
+                    st.code(us_record_xml[:1500])
+                    break
+
+    return None
 
 def run_ifta():
     """IFTA Fuel Tax Module with Trip Log, Fuel Log, Quarterly Report, and Load Estimator"""
