@@ -204,7 +204,7 @@ def run_ifta():
             
             col_d1, col_d2, col_d3 = st.columns([2, 1, 1])
             with col_d1:
-                dest_city = st.text_input("Destination City", placeholder="e.g. Hirman", key="dest_city")
+                dest_city = st.text_input("Destination City", placeholder="e.g. Hiram", key="dest_city")
                 dest_state = st.selectbox("Destination State (type code, then click selection)", us_states, key="dest_state", index=us_states.index("GA") if "GA" in us_states else 0)
                 st.caption("💡 Type, then **click** the option")
             with col_d2:
