@@ -1,7 +1,11 @@
+
 import streamlit as st
 import tempfile
 import os
 import csv
+import requests
+import xml.etree.ElementTree as ET
+from datetime import date
 from io import StringIO
 
 # Import the parser functions (make sure settlement_parser_final.py is in the same folder)
@@ -41,6 +45,71 @@ def load_tax_rates():
             'TX': 0.20, 'UT': 0.379, 'VT': 0.31, 'VA': 0.479, 'WA': 0.595,
             'WV': 0.357, 'WI': 0.329, 'WY': 0.24
         }
+def get_current_quarter():
+    """Return the current IFTA quarter code, e.g., '3Q2026'."""
+    today = date.today()
+    quarter = (today.month - 1) // 3 + 1
+    return f"{quarter}Q{today.year}"
+
+def fetch_latest_rates():
+    """
+    Download the official IFTA XML for the current quarter,
+    parse U.S. Special Diesel rates, apply surcharges,
+    and return a dict {state: rate}.
+    """
+    quarter = get_current_quarter()
+    url = f"https://www.iftach.org/taxmatrix/charts/{quarter}.xml"
+
+    try:
+        response = requests.get(url, timeout=15)
+        response.raise_for_status()
+    except Exception as e:
+        st.error(f"❌ Could not download the IFTA matrix: {e}")
+        return None
+
+    try:
+        root = ET.fromstring(response.content)
+    except ET.ParseError as e:
+        st.error(f"❌ Could not parse the IFTA XML: {e}")
+        return None
+
+    rates = {}
+    surcharges = {}
+
+    for record in root.findall(".//RECORD"):
+        jurisdiction = record.findtext("JURISDICTION", "").strip().upper()
+        fuel_type = record.findtext("TYPE", "").strip()
+        rate_str = record.findtext("RATE", "").strip()
+
+        if not jurisdiction or not rate_str:
+            continue
+
+        # Only U.S. states (2-letter codes) – ignore Canadian provinces.
+        if len(jurisdiction) != 2:
+            continue
+
+        try:
+            rate = float(rate_str)
+        except ValueError:
+            continue
+
+        if "SURCHARGE" in fuel_type.upper() or "SURCHG" in jurisdiction:
+            base_state = jurisdiction.replace("SURCHG", "").strip()
+            surcharges[base_state] = surcharges.get(base_state, 0) + rate
+        elif "DIESEL" in fuel_type.upper() or "SPECIAL" in fuel_type.upper():
+            rates[jurisdiction] = rate
+
+    for state, surcharge in surcharges.items():
+        if state in rates:
+            rates[state] += surcharge
+        else:
+            rates[state] = surcharge
+
+    if not rates:
+        st.warning("⚠️ No U.S. Special Diesel rates found in the XML. Using existing CSV.")
+        return None
+
+    return rates
 
 def run_ifta():
     """IFTA Fuel Tax Module with Trip Log, Fuel Log, Quarterly Report, and Load Estimator"""
@@ -57,6 +126,26 @@ def run_ifta():
     
     # ✅ Show current rates status (moved here)
     st.info(f"📋 **Current Tax Rates:** {len(state_tax_rates)} states loaded · Q3 2026 · Source: state_tax_rates.csv")
+
+    # --- Refresh Tax Rates from IFTA ---
+    col_refresh, _ = st.columns([1, 4])
+    with col_refresh:
+        if st.button("🔄 Refresh Tax Rates from IFTA"):
+            with st.spinner("Downloading latest rates from IFTA..."):
+                new_rates = fetch_latest_rates()
+                if new_rates:
+                    # Save to CSV
+                    with open("state_tax_rates.csv", "w", newline="", encoding="utf-8") as f:
+                        writer = csv.writer(f)
+                        writer.writerow(["state", "tax_rate"])
+                        for state, rate in sorted(new_rates.items()):
+                            writer.writerow([state, rate])
+                    # Update session state
+                    st.session_state.tax_rates = new_rates
+                    st.success("✅ Tax rates updated from IFTA!")
+                    st.rerun()
+                else:
+                    st.error("❌ Could not update rates. Check the connection or try again later.")
     
     # Initialize session state for data
     if 'ifta_trips' not in st.session_state:
@@ -166,6 +255,7 @@ def run_ifta():
         
         st.markdown("---")
         st.info("🔄 **For trips with 3+ states** (e.g., GA → SC → NC), use the multi‑state text area below.")
+
         
         with st.form("multi_state_form"):
             col1, col2 = st.columns(2)
