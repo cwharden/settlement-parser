@@ -1,4 +1,3 @@
-
 import streamlit as st
 import tempfile
 import os
@@ -196,7 +195,8 @@ def run_ifta():
             col_o1, col_o2, col_o3 = st.columns([2, 1, 1])
             with col_o1:
                 orig_city = st.text_input("Origin City", placeholder="e.g. Lancaster", key="orig_city")
-                orig_state = st.selectbox("Origin State", us_states, key="orig_state", index=us_states.index("SC") if "SC" in us_states else 0)
+                orig_state = st.selectbox("Origin State (type code, then click selection)", us_states, key="orig_state", index=us_states.index("SC") if "SC" in us_states else 0)
+                st.caption("💡 Type, then **click** the option")
             with col_o2:
                 orig_miles = st.number_input(" ", min_value=0.0, step=0.01, value=0.0, key="orig_miles", label_visibility="collapsed")
             with col_o3:
@@ -205,7 +205,8 @@ def run_ifta():
             col_d1, col_d2, col_d3 = st.columns([2, 1, 1])
             with col_d1:
                 dest_city = st.text_input("Destination City", placeholder="e.g. Hirman", key="dest_city")
-                dest_state = st.selectbox("Destination State", us_states, key="dest_state", index=us_states.index("GA") if "GA" in us_states else 0)
+                dest_state = st.selectbox("Destination State (type code, then click selection)", us_states, key="dest_state", index=us_states.index("GA") if "GA" in us_states else 0)
+                st.caption("💡 Type, then **click** the option")
             with col_d2:
                 dest_miles = st.number_input("   ", min_value=0.0, step=0.01, value=0.0, key="dest_miles", label_visibility="collapsed")
             with col_d3:
@@ -578,7 +579,8 @@ def run_ifta():
             
             col_est_o1, col_est_o2, col_est_o3 = st.columns([2, 1, 1])
             with col_est_o1:
-                est_orig_state = st.selectbox("Origin State", us_states, key="est_orig_state", index=us_states.index("GA") if "GA" in us_states else 0)
+                est_orig_state = st.selectbox("Origin State (type code, then click selection)", us_states, key="est_orig_state", index=us_states.index("GA") if "GA" in us_states else 0)
+                st.caption("⌨️ Type 'GA' → **click the highlighted option**")
             with col_est_o2:
                 est_orig_miles = st.number_input("  ", min_value=0.0, step=0.01, value=0.0, key="est_orig_miles", label_visibility="collapsed")
             with col_est_o3:
@@ -586,7 +588,8 @@ def run_ifta():
             
             col_est_d1, col_est_d2, col_est_d3 = st.columns([2, 1, 1])
             with col_est_d1:
-                est_dest_state = st.selectbox("Destination State", us_states, key="est_dest_state", index=us_states.index("SC") if "SC" in us_states else 0)
+                est_dest_state = st.selectbox("Destination State (type code, then click selection)", us_states, key="est_dest_state", index=us_states.index("SC") if "SC" in us_states else 0)
+                st.caption("⌨️ Type 'SC' → **click the highlighted option**")
             with col_est_d2:
                 est_dest_miles = st.number_input("    ", min_value=0.0, step=0.01, value=0.0, key="est_dest_miles", label_visibility="collapsed")
             with col_est_d3:
