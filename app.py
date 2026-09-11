@@ -52,100 +52,42 @@ def get_current_quarter():
     return f"{quarter}Q{today.year}"
 
 def fetch_latest_rates():
-    """DIAGNOSTIC VERSION – shows exactly what's in the XML"""
+    """DIAGNOSTIC: show all distinct COUNTRY values"""
     quarter = get_current_quarter()
     url = f"https://www.iftach.org/taxmatrix/charts/{quarter}.xml"
 
     try:
         response = requests.get(url, timeout=15)
         response.raise_for_status()
-    except Exception as e:
-        st.error(f"❌ Download failed: {e}")
-        return None
-
-    try:
         root = ET.fromstring(response.content)
-    except ET.ParseError as e:
-        st.error(f"❌ Parse failed: {e}")
+    except Exception as e:
+        st.error(f"❌ Failed: {e}")
         return None
 
     records = root.findall(".//RECORD")
-    st.write(f"### 🔍 Found {len(records)} RECORD elements")
+    st.write(f"### 🔍 Total records: {len(records)}")
 
-    # Find the first US record and show everything
-    us_found = False
-    for idx, rec in enumerate(records):
+    # Collect all distinct COUNTRY values with a sample jurisdiction
+    seen = {}
+    for rec in records:
         jur = rec.find("JURISDICTION")
         country = rec.find("COUNTRY")
-        
-        if jur is None or country is None:
-            st.write(f"Record {idx}: missing JURISDICTION or COUNTRY")
+        if country is None or jur is None:
             continue
+        c = (country.text or "").strip()
+        if c not in seen:
+            seen[c] = (jur.text or "").strip()
 
-        jur_text = (jur.text or "").strip()
-        country_text = (country.text or "").strip()
-        
-        # Show first 3 records for inspection
-        if idx < 3:
-            st.write(f"**Record {idx}:** JURISDICTION=`{jur_text}`, COUNTRY=`{country_text}`, attrs={jur.attrib}")
-        
-        # Found a US record – dump all children
-        if country_text.upper() == "US" and not us_found:
-            us_found = True
-            st.success(f"✅ Found first US record: {jur_text}")
-            st.write("**All children in this record:**")
-            for child in rec:
-                st.write(f"- tag=`{child.tag}` text=`{child.text!r}` attrs={child.attrib}")
-            
-            # Now simulate the parsing logic
-            st.write("**Simulating parse logic:**")
-            current_fuel = None
-            for child in rec:
-                if child.tag == "FUEL_TYPE":
-                    current_fuel = (child.text or "").strip()
-                    st.write(f"  → Set current_fuel = `{current_fuel}`")
-                elif child.tag == "RATE":
-                    if current_fuel == "Special Diesel":
-                        st.write(f"  → RATE found for Special Diesel: country={child.get('COUNTRY')}, value={child.text}")
-                        if child.get("COUNTRY") == "US":
-                            st.success(f"  ✅ MATCH! Would extract: {child.text}")
-                            break
-    
-    if not us_found:
-        st.error("❌ No US records found at all!")
+    st.write("### 🔍 Distinct COUNTRY values found:")
+    for c, sample in seen.items():
+        st.write(f"- `{repr(c)}` (first seen with jurisdiction `{sample}`)")
 
-    return None
-
-    try:
-        root = ET.fromstring(response.content)
-    except ET.ParseError as e:
-        st.error(f"❌ Parse failed: {e}")
-        return None
-
-    # Show the first 2500 characters (full DTD)
-    st.write("### 📋 Full DTD (schema)")
-    st.code(response.text[:2500])
-
-    # Show one full RECORD as raw text
-    records = root.findall(".//RECORD")
-    st.write(f"### 📋 Total RECORDs found: {len(records)}")
-
-    if records:
-        # Show first record's raw XML
-        first_record_xml = ET.tostring(records[0], encoding='unicode')
-        st.write("### 📋 First RECORD (raw XML)")
-        st.code(first_record_xml[:1500])
-
-        # Look for a US state record – try to find one with ID="GA" or similar
-        for rec in records:
-            jur = rec.find("JURISDICTION")
-            if jur is not None:
-                jur_id = jur.get("ID", "")
-                if jur_id in ["GA", "SC", "TX", "AL"]:
-                    us_record_xml = ET.tostring(rec, encoding='unicode')
-                    st.write(f"### 📋 Sample U.S. record (ID={jur_id})")
-                    st.code(us_record_xml[:1500])
-                    break
+    # Also dump a "late" record (should be a U.S. state)
+    if len(records) > 15:
+        late = records[15]
+        st.write(f"### 🔍 Record #15 (should be a U.S. state):")
+        for child in late:
+            st.write(f"- tag=`{child.tag}` text=`{child.text!r}` attrs={child.attrib}")
 
     return None
 
