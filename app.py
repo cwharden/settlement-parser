@@ -52,16 +52,74 @@ def get_current_quarter():
     return f"{quarter}Q{today.year}"
 
 def fetch_latest_rates():
-    """TEMPORARY DEBUG VERSION 2"""
+    """
+    Download the official IFTA XML for the current quarter,
+    parse U.S. Special Diesel rates (including surcharges),
+    and return a dict {state: rate}.
+    """
     quarter = get_current_quarter()
     url = f"https://www.iftach.org/taxmatrix/charts/{quarter}.xml"
 
     try:
         response = requests.get(url, timeout=15)
-        st.write(f"🔍 HTTP status: {response.status_code}")
+        response.raise_for_status()
     except Exception as e:
-        st.error(f"❌ Download failed: {e}")
+        st.error(f"❌ Could not download the IFTA matrix: {e}")
         return None
+
+    try:
+        root = ET.fromstring(response.content)
+    except ET.ParseError as e:
+        st.error(f"❌ Could not parse the IFTA XML: {e}")
+        return None
+
+    rates = {}
+
+    for record in root.findall(".//RECORD"):
+        jur_elem = record.find("JURISDICTION")
+        country_elem = record.find("COUNTRY")
+
+        if jur_elem is None or country_elem is None:
+            continue
+
+        state_code = (jur_elem.text or "").strip().upper()
+        country = (country_elem.text or "").strip().upper()
+
+        # Only U.S. states (2-letter codes)
+        if country != "US" or len(state_code) != 2:
+            continue
+
+        # Read the optional SURCHARGE attribute on JURISDICTION
+        surcharge_str = (jur_elem.get("SURCHARGE") or "").strip()
+        try:
+            surcharge = float(surcharge_str) if surcharge_str else 0.0
+        except ValueError:
+            surcharge = 0.0
+
+        # Walk through children: alternate FUEL_TYPE / RATE pairs
+        current_fuel = None
+        base_rate = None
+
+        for child in record:
+            if child.tag == "FUEL_TYPE":
+                current_fuel = (child.text or "").strip()
+            elif child.tag == "RATE":
+                # We want the US rate for "Special Diesel"
+                if current_fuel == "Special Diesel" and child.get("COUNTRY") == "US":
+                    try:
+                        base_rate = float((child.text or "").strip())
+                    except ValueError:
+                        pass
+                    break  # Done with this record
+
+        if base_rate is not None:
+            rates[state_code] = base_rate + surcharge
+
+    if not rates:
+        st.warning("⚠️ No U.S. Special Diesel rates found in the XML. Using existing CSV.")
+        return None
+
+    return rates
 
     try:
         root = ET.fromstring(response.content)
