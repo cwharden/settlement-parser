@@ -151,10 +151,15 @@ def run_ifta():
                             writer.writerow([state, rate])
                     # Update session state
                     st.session_state.tax_rates = new_rates
-                    st.success("✅ Tax rates updated from IFTA!")
+                    st.session_state.rate_update_success = True
                     st.rerun()
                 else:
                     st.error("❌ Could not update rates. Check the connection or try again later.")
+
+    # ✅ Show success message AFTER rerun (persists across refresh)
+    if st.session_state.get('rate_update_success'):
+        st.success("✅ Tax rates updated from IFTA successfully!")
+        st.session_state.rate_update_success = False
     
     # Initialize session state for data
     if 'ifta_trips' not in st.session_state:
