@@ -6,6 +6,7 @@ import requests
 import xml.etree.ElementTree as ET
 from datetime import date
 from io import StringIO
+import textwrap
 
 # Import the parser functions (make sure settlement_parser_final.py is in the same folder)
 from settlement_parser_final import (
@@ -898,7 +899,8 @@ with tab3:
     
     st.markdown("---")
     st.subheader("🚛 Don't see your carrier?")
-    st.markdown("""
+    
+st.markdown(textwrap.dedent("""
     Currently supporting **Bennett** and **Landstar**. If you use a different carrier, I can add support for it!
     
     **What I need from you:**
@@ -911,12 +913,13 @@ with tab3:
     If I can't support your carrier's format (rare, but possible with unusual layouts or poor scan quality), you'll be notified and won't be charged.
 
     **Pricing:**
-    - **$150 one-time — new carrier support + 12 months of unlimited conversions
-    - **$250 one-time — complex carriers (image/OCR processing) + 12 months of unlimited conversions
-    - **$99/year — unlimited conversions across all supported carriers, ongoing, plus priority turnaround on new carrier requests
-	After your first year, keep your carrier active for $49/year — or switch to the $99/year plan anytime if you're using multiple carriers.
+    - **$150 one-time** — new carrier support + 12 months of unlimited conversions
+    - **$250 one-time** — complex carriers (image/OCR processing) + 12 months of unlimited conversions
+    - **$99/year** — unlimited conversions across all supported carriers, ongoing, plus priority turnaround on new carrier requests
     
-    **Turnaround: 2-3 weeks -- I work on this in my free time, so thanks for your patience.
-    """)
+    After your first year, keep your carrier active for $49/year — or switch to the $99/year plan anytime if you're using multiple carriers.
+    
+    **Turnaround:** 2-3 weeks — I work on this in my free time, so thanks for your patience.
+    """))
     carrier_request_url = "mailto:settlementparsermail@gmail.com?subject=New%20Carrier%20Request%20-%20[Carrier%20Name]"
     st.link_button("🚛 Request a New Carrier", carrier_request_url, type="primary")
