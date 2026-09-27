@@ -922,5 +922,5 @@ st.markdown(textwrap.dedent("""
     **Turnaround:** 2-3 weeks — I work on this in my free time, so thanks for your patience.
     """))
 
-carrier_request_url = "mailto:settlementparsermail@gmail.com?subject=New%20Carrier%20Request%20-%20[Carrier%20Name]"
-st.link_button("🚛 Request a New Carrier", carrier_request_url, type="primary")
+    carrier_request_url = "mailto:settlementparsermail@gmail.com?subject=New%20Carrier%20Request%20-%20[Carrier%20Name]"
+    st.link_button("🚛 Request a New Carrier", carrier_request_url, type="primary")
