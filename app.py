@@ -917,7 +917,7 @@ with tab3:
     - **$250 one-time** — complex carriers (image/OCR processing) + 12 months of unlimited conversions
     - **$99/year** — unlimited conversions across all supported carriers, ongoing, plus priority turnaround on new carrier requests
     
-    After your first year, keep your carrier active for **$49/year - or switch to the $99/year** plan anytime if you're using multiple carriers.
+    After your first year, keep your carrier active for **\$49/year - or switch to the \$99/year** plan anytime if you're using multiple carriers.
     
     **Turnaround:** 2-3 weeks — I work on this in my free time, so thanks for your patience.
     """))
