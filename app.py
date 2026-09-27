@@ -904,14 +904,18 @@ with tab3:
     **What I need from you:**
     - 3-5 sample settlement PDFs (different dates if possible)
     - Your carrier name
-    - Any specific data you need captured
+    - Any specific fields you need captured (e.g., linehaul pay, fuel surcharge, deductions, driver name, settlement date)
     
+    Your data: Sample PDFs are used only to build support for your carrier's format and are deleted once that's done. They're never shared or used for anything else.
+
+    If I can't support your carrier's format (rare, but possible with unusual layouts or poor scan quality), you'll be notified and won't be charged.
+
     **Pricing:**
     - **$150 one-time fee** (standard carriers)
     - **$250 one-time fee** (complex carriers with images/OCR)
     - **Free with annual subscription** ($99/year)
     
-    **Turnaround:** 2-3 weeks (I work on this in my free time)
+    **Turnaround: 2-3 weeks -- I work on this in my free time, so thanks for your patience.
     """)
     carrier_request_url = "mailto:settlementparsermail@gmail.com?subject=New%20Carrier%20Request%20-%20[Carrier%20Name]"
     st.link_button("🚛 Request a New Carrier", carrier_request_url, type="primary")
