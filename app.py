@@ -911,9 +911,10 @@ with tab3:
     If I can't support your carrier's format (rare, but possible with unusual layouts or poor scan quality), you'll be notified and won't be charged.
 
     **Pricing:**
-    - **$150 one-time fee** (standard carriers)
-    - **$250 one-time fee** (complex carriers with images/OCR)
-    - **Free with annual subscription** ($99/year)
+    - **$150 one-time — new carrier support + 12 months of unlimited conversions
+    - **$250 one-time — complex carriers (image/OCR processing) + 12 months of unlimited conversions
+    - **$99/year — unlimited conversions across all supported carriers, ongoing, plus priority turnaround on new carrier requests
+	After your first year, keep your carrier active for $49/year — or switch to the $99/year plan anytime if you're using multiple carriers.
     
     **Turnaround: 2-3 weeks -- I work on this in my free time, so thanks for your patience.
     """)
