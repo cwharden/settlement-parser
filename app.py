@@ -747,6 +747,132 @@ def run_ifta():
                 st.session_state.ifta_estimates = []
                 st.success("✅ All estimates cleared.")
                 st.rerun()
+
+def run_rate_calculator():
+    """Load Rate Calculator — tells you if a rate is worth taking."""
+    st.subheader("🚛 Load Rate Calculator")
+    st.markdown("Enter your costs, route, and the offered rate. See instantly if the load is worth taking.")
+
+    st.markdown("### 💰 Your Cost Per Mile")
+
+    fuel_mode = st.radio(
+        "How do you want to enter fuel cost?",
+        ["I know my $/mile", "Calculate from $/gal + MPG"],
+        horizontal=True,
+        key="rate_fuel_mode"
+    )
+
+    col_a, col_b, col_c = st.columns(3)
+
+    if fuel_mode == "I know my $/mile":
+        with col_a:
+            fuel_cpm = st.number_input("Fuel cost ($/mile)", min_value=0.0, step=0.01, value=0.65, key="rate_fuel_direct")
+    else:
+        with col_a:
+            diesel_price = st.number_input("Diesel price ($/gal)", min_value=0.0, step=0.01, value=3.80, key="rate_diesel")
+        with col_b:
+            mpg = st.number_input("Truck MPG", min_value=0.1, step=0.1, value=6.5, key="rate_mpg")
+        with col_c:
+            fuel_cpm = diesel_price / mpg if mpg > 0 else 0
+            st.metric("Fuel cost", f"${fuel_cpm:.2f}/mi")
+
+    col_d, col_e = st.columns(2)
+    with col_d:
+        other_cpm = st.number_input("Other operating cost ($/mile)", min_value=0.0, step=0.01, value=0.55,
+                                     key="rate_other",
+                                     help="Truck payment, insurance, maintenance, tires, permits, ELD")
+    with col_e:
+        target_profit = st.number_input("Target profit ($/mile, optional)", min_value=0.0, step=0.01, value=0.00,
+                                         key="rate_profit")
+
+    total_cpm = fuel_cpm + other_cpm
+
+    st.markdown("---")
+    st.markdown("### 📍 Route")
+
+    col_r1, col_r2, col_r3 = st.columns(3)
+    with col_r1:
+        truck_loc = st.text_input("Truck's current location", placeholder="City, ST", key="rate_truck_loc")
+    with col_r2:
+        pickup_loc = st.text_input("Pickup location", placeholder="City, ST", key="rate_pickup_loc")
+    with col_r3:
+        delivery_loc = st.text_input("Delivery location", placeholder="City, ST", key="rate_delivery_loc")
+
+    st.caption("💡 Enter miles manually below. Auto-mile lookup coming soon.")
+
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        dh_miles = st.number_input("Deadhead miles (truck → pickup)", min_value=0.0, step=1.0, value=0.0, key="rate_dh")
+    with col_m2:
+        ld_miles = st.number_input("Loaded miles (pickup → delivery)", min_value=0.0, step=1.0, value=0.0, key="rate_ld")
+
+    total_miles = dh_miles + ld_miles
+    pct_empty = (dh_miles / total_miles * 100) if total_miles > 0 else 0
+
+    st.markdown("---")
+    st.markdown("### 💵 Offered Rate")
+
+    offer_mode = st.radio(
+        "How was the rate quoted?",
+        ["$ per mile", "Total for the load"],
+        horizontal=True,
+        key="rate_offer_mode"
+    )
+
+    if offer_mode == "$ per mile":
+        offered_per_mile = st.number_input("Offered rate ($/loaded mile)", min_value=0.0, step=0.01, value=0.00, key="rate_offer_pm")
+    else:
+        offer_total = st.number_input("Offered total ($)", min_value=0.0, step=1.0, value=0.0, key="rate_offer_total")
+        offered_per_mile = (offer_total / ld_miles) if ld_miles > 0 else 0
+
+    st.markdown("---")
+    st.markdown("### 📊 Verdict")
+
+    if ld_miles <= 0 or total_cpm <= 0:
+        st.info("Enter loaded miles and cost-per-mile to see your minimum rate.")
+        return
+
+    trip_cost = total_miles * total_cpm
+    revenue_needed = trip_cost + target_profit * ld_miles
+    min_rate_per_mile = revenue_needed / ld_miles
+
+    col_s1, col_s2, col_s3 = st.columns(3)
+    with col_s1:
+        st.metric("Your minimum rate", f"${min_rate_per_mile:.2f}/mi",
+                  help="The lowest $/loaded mile that covers your costs")
+    with col_s2:
+        st.metric("Total cost for trip", f"${trip_cost:,.2f}")
+    with col_s3:
+        st.metric("Empty %", f"{pct_empty:.0f}%",
+                  help="Deadhead as % of total miles")
+
+    if offered_per_mile > 0:
+        gap_per_mile = offered_per_mile - min_rate_per_mile
+        gap_total = gap_per_mile * ld_miles
+
+        if gap_per_mile >= 0.005:
+            st.success(f"✅ **TAKE IT.** The rate is ${gap_per_mile:.2f}/mi above your minimum (${gap_total:,.0f} extra on this load).")
+        elif gap_per_mile <= -0.005:
+            st.error(f"🚫 **REJECT.** The rate is ${abs(gap_per_mile):.2f}/mi below your minimum (${abs(gap_total):,.0f} short on this load).")
+        else:
+            st.warning("⚠️ **BREAK-EVEN.** The rate is right at your minimum. Consider negotiating.")
+
+        with st.expander("📋 See full breakdown"):
+            st.markdown(f"""
+| Metric | Value |
+|---|---|
+| Deadhead miles | {dh_miles:,.0f} mi |
+| Loaded miles | {ld_miles:,.0f} mi |
+| Total miles | {total_miles:,.0f} mi |
+| Fuel cost | ${fuel_cpm:.2f}/mi |
+| Other operating cost | ${other_cpm:.2f}/mi |
+| **Total cost per mile** | **${total_cpm:.2f}/mi** |
+| Target profit | ${target_profit:.2f}/mi |
+| **Minimum rate** | **${min_rate_per_mile:.2f}/loaded mile** |
+| Offered rate | ${offered_per_mile:.2f}/loaded mile |
+| Gap | ${gap_per_mile:+.2f}/loaded mile |
+""")
+
 # ---------- MAIN APP ----------
 st.set_page_config(page_title="Settlement Parser", page_icon="🚛", layout="wide")
 
@@ -887,8 +1013,13 @@ with tab1:
 with tab2:
     run_ifta()
 
-# ---------- TAB 3: Feedback ----------
+# ---------- TAB 3: Rate Calculator ----------
 with tab3:
+    run_rate_calculator()
+
+
+# ---------- TAB 4: Feedback ----------
+with tab4:
     st.markdown("---")
     st.subheader("📝 Feedback & Carrier Requests")
     st.markdown("""
