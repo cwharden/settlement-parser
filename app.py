@@ -749,7 +749,7 @@ def run_ifta():
 
 def run_rate_calculator():
     """Load Rate Calculator — tells you if a rate is worth taking."""
-    st.subheader("🚛 Load Rate Calculator")
+    st.subheader("🚛 Load Calculator")
     st.markdown("Enter your costs, route, and the offered rate. See instantly if the load is worth taking.")
 
     st.markdown("### 💰 Your Cost Per Mile")
@@ -879,7 +879,7 @@ st.title("📂 Settlement Parser")
 st.markdown("Upload settlements, track IFTA fuel tax, and manage your books all in one place.")
 
 # --- Create Tabs ---
-tab1, tab2, tab3, tab4 = st.tabs(["📄 Settlement Parser", "📊 IFTA Fuel Tax", "🚛 Rate Calculator", "📝 Feedback"])
+tab1, tab2, tab3, tab4 = st.tabs(["📄 Settlement Parser", "📊 IFTA Fuel Tax", "🚛 Load Estimator", "📝 Feedback"])
 
 # ---------- TAB 1: Settlement Parser ----------
 with tab1:
