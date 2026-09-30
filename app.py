@@ -170,11 +170,10 @@ def run_ifta():
         st.session_state.ifta_estimates = []
     
     # --- Tab Layout ---
-    ifta_tab1, ifta_tab2, ifta_tab3, ifta_tab4 = st.tabs([
+    ifta_tab1, ifta_tab2, ifta_tab3 = st.tabs([
         "📝 Trip Log", 
         "⛽ Fuel Log", 
-        "📊 Quarterly Report",
-        "💰 Load Estimator"
+        "📊 Quarterly Report"
     ])
     
     # ---------- TAB 1: Trip Log ----------
@@ -553,8 +552,8 @@ def run_ifta():
                     mime="text/csv"
                 )
     
-    # ---------- TAB 4: Load Estimator ----------
-    with ifta_tab4:
+    # ---------- TAB 4: Load Estimator (DISABLED — replaced by Rate Calculator) ----------
+    if False:
         st.subheader("💰 Load Estimator")
         st.markdown("Estimate gross revenue, fuel cost, IFTA tax, and net profit for a potential load.")
         
