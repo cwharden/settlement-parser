@@ -880,7 +880,7 @@ st.title("📂 Settlement Parser")
 st.markdown("Upload settlements, track IFTA fuel tax, and manage your books all in one place.")
 
 # --- Create Tabs ---
-tab1, tab2, tab3 = st.tabs(["📄 Settlement Parser", "📊 IFTA Fuel Tax", "📝 Feedback"])
+tab1, tab2, tab3, tab4 = st.tabs(["📄 Settlement Parser", "📊 IFTA Fuel Tax", "🚛 Rate Calculator", "📝 Feedback"])
 
 # ---------- TAB 1: Settlement Parser ----------
 with tab1:
