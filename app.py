@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 from datetime import date
 from io import StringIO
 import textwrap
+from google_mileage import get_driving_miles
 
 # Import the parser functions (make sure settlement_parser_final.py is in the same folder)
 from settlement_parser_final import (
@@ -785,7 +786,6 @@ def run_rate_calculator():
                                          key="rate_profit")
 
     total_cpm = fuel_cpm + other_cpm
-
     st.markdown("---")
     st.markdown("### 📍 Route")
 
@@ -797,17 +797,58 @@ def run_rate_calculator():
     with col_r3:
         delivery_loc = st.text_input("Delivery location", placeholder="City, ST", key="rate_delivery_loc")
 
-    st.caption("💡 Enter miles manually below. Auto-mile lookup coming soon.")
+    # Initialize stored mileage so it survives between reruns
+    if "rate_dh_computed" not in st.session_state:
+        st.session_state.rate_dh_computed = 0.0
+    if "rate_ld_computed" not in st.session_state:
+        st.session_state.rate_ld_computed = 0.0
+
+    col_btn, col_status = st.columns([1, 3])
+    with col_btn:
+        get_miles_clicked = st.button("📍 Get Miles", key="rate_get_miles")
+
+    if get_miles_clicked:
+        api_key = st.secrets.get("GOOGLE_MAPS_API_KEY", "")
+        if not api_key:
+            st.error("No Google Maps API key found in secrets.")
+        elif not pickup_loc.strip() or not delivery_loc.strip():
+            st.warning("Enter at least a pickup and delivery location first.")
+        else:
+            with st.spinner("Looking up mileage..."):
+                if truck_loc.strip() and truck_loc.strip().lower() != pickup_loc.strip().lower():
+                    dh_result = get_driving_miles(truck_loc, pickup_loc, api_key)
+                else:
+                    dh_result = 0.0
+
+                ld_result = get_driving_miles(pickup_loc, delivery_loc, api_key)
+
+            if dh_result is None or ld_result is None:
+                st.error("Couldn't find a route for one or both legs — check the city/state spelling.")
+            else:
+                st.session_state.rate_dh_computed = dh_result
+                st.session_state.rate_ld_computed = ld_result
+                st.success(f"✅ Deadhead: {dh_result} mi · Loaded: {ld_result} mi")
 
     col_m1, col_m2 = st.columns(2)
     with col_m1:
-        dh_miles = st.number_input("Deadhead miles (truck → pickup)", min_value=0.0, step=1.0, value=0.0, key="rate_dh")
+        dh_miles = st.number_input(
+            "Deadhead miles (truck → pickup)",
+            min_value=0.0, step=1.0,
+            value=st.session_state.rate_dh_computed,
+            key="rate_dh"
+        )
     with col_m2:
-        ld_miles = st.number_input("Loaded miles (pickup → delivery)", min_value=0.0, step=1.0, value=0.0, key="rate_ld")
+        ld_miles = st.number_input(
+            "Loaded miles (pickup → delivery)",
+            min_value=0.0, step=1.0,
+            value=st.session_state.rate_ld_computed,
+            key="rate_ld"
+        )
+
+    st.caption("💡 Click 'Get Miles' to pull real mileage, or type numbers in directly if you already know them.")
 
     total_miles = dh_miles + ld_miles
     pct_empty = (dh_miles / total_miles * 100) if total_miles > 0 else 0
-
     st.markdown("---")
     st.markdown("### 💵 Offered Rate")
 
